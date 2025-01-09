@@ -3,19 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Relay Web</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>WebSocket Client</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #messages { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: scroll; }
+        #input { width: 100%; }
+        #serverInput { width: 100%; margin-bottom: 10px; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Text Relay Web</h1>
-        <input type="text" id="ipAddress" placeholder="Enter IP Address or Session ID">
-        <textarea id="message" placeholder="Type your message here"></textarea>
-        <button id="connectBtn">Connect</button>
-        <button id="sendBtn">Send</button>
-        <div id="status"></div>
-        <div id="messages"></div>
-    </div>
-    <script src="script.js"></script>
+    <h1>WebSocket Client</h1>
+    <input type="text" id="serverInput" placeholder="Enter WebSocket server URL (e.g., ws://192.168.29.208:8080)" />
+    <button id="connect">Connect</button>
+    <div id="messages"></div>
+    <input type="text" id="input" placeholder="Type a message..." />
+    <button id="send">Send</button>
+
+    <script>
+        const messagesDiv = document.getElementById('messages');
+        const inputField = document.getElementById('input');
+        const sendButton = document.getElementById('send');
+        const serverInput = document.getElementById('serverInput');
+        let socket;
+
+        document.getElementById('connect').onclick = function() {
+            const serverUrl = serverInput.value;
+            if (socket) {
+                socket.close(); // Close existing connection if any
+            }
+            socket = new WebSocket(serverUrl);
+
+            socket.onopen = function() {
+                console.log('Connected to server');
+                messagesDiv.innerHTML += '<div>Connected to server: ' + serverUrl + '</div>';
+            };
+
+            socket.onmessage = function(event) {
+                const message = document.createElement('div');
+                message.textContent = event.data;
+                messagesDiv.appendChild(message);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+                const activeElement = document.activeElement;
+                if (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') {
+                    activeElement.value += event.data;
+                    activeElement.focus();
+                }
+            };
+
+            socket.onerror = function(error) {
+                console.error('WebSocket Error: ', error);
+                messagesDiv.innerHTML += '<div style="color: red;">Error: ' + error.message + '</div>';
+            };
+
+            socket.onclose = function() {
+                console.log('Disconnected from server');
+                messagesDiv.innerHTML += '<div style="color: red;">Disconnected from server</div>';
+            };
+        };
+
+        sendButton.onclick = function() {
+            const message = inputField.value;
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(message);
+                inputField.value = '';
+            } else {
+                alert('WebSocket is not connected.');
+            }
+        };
+    </script>
 </body>
-</html> 
+</html>
